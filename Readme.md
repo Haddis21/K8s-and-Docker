@@ -55,7 +55,7 @@ docker-desktop   Ready    control-plane   5m    v1.29.x
 
 ### 1. Clone the Repository
 ```bash
-git clone <your-repository-url>
+git clone <https://github.com/Haddis21/K8s-and-Docker.git>
 cd food-ordering-system
 ```
 
