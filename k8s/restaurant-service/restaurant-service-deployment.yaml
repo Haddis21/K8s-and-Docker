@@ -1,0 +1,75 @@
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: restaurant-service-config
+  namespace: food-ordering-system
+data:
+  ConnectionStrings__DefaultConnection: "Host=postgres-service;Database=RestaurantDb;Username=postgres;Password=postgres"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: restaurant-service
+  namespace: food-ordering-system
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: restaurant-service
+  template:
+    metadata:
+      labels:
+        app: restaurant-service
+    spec:
+      containers:
+      - name: restaurant-service
+        image: restaurant-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8081
+        env:
+        - name: ConnectionStrings__DefaultConnection
+          valueFrom:
+            configMapKeyRef:
+              name: restaurant-service-config
+              key: ConnectionStrings__DefaultConnection
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: restaurant-service
+  namespace: food-ordering-system
+spec:
+  selector:
+    app: restaurant-service
+  ports:
+  - port: 8081
+    targetPort: 8081
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: restaurant-service-hpa
+  namespace: food-ordering-system
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: restaurant-service
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70

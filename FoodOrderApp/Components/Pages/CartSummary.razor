@@ -1,0 +1,42 @@
+﻿@rendermode InteractiveServer
+@inject CartService CartService
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<div class="me-3">
+    @if (itemCount > 0)
+    {
+        <button class="btn btn-primary position-relative" @onclick="GoToCart">
+            <span class="oi oi-cart"></span> Cart
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                @itemCount
+            </span>
+        </button>
+    }
+</div>
+
+@code {
+    private int itemCount = 0;
+
+    protected override void OnInitialized()
+    {
+        itemCount = CartService.GetItemCount();
+        CartService.OnCartChanged += UpdateCart;
+    }
+
+    private void UpdateCart()
+    {
+        itemCount = CartService.GetItemCount();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void GoToCart()
+    {
+        Navigation.NavigateTo("/cart");
+    }
+
+    public void Dispose()
+    {
+        CartService.OnCartChanged -= UpdateCart;
+    }
+}

@@ -1,0 +1,166 @@
+﻿@page "/menus/{restaurantId:int}"
+@rendermode InteractiveServer
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>Restaurant Menu</PageTitle>
+
+<h3>Restaurant Menu</h3>
+
+@if (isLoading)
+{
+    <p><em>Loading menu...</em></p>
+}
+else if (menuItems == null || !menuItems.Any())
+{
+    <p>No menu items available for this restaurant.</p>
+}
+else
+{
+    <div class="row">
+        @foreach (var item in menuItems)
+        {
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">@item.Name</h5>
+                        <p class="card-text">@item.Description</p>
+                        <p class="card-text"><strong>Price: $@item.Price.ToString("F2")</strong></p>
+                        @if (item.IsAvailable)
+                        {
+                            <button class="btn btn-primary" @onclick="() => AddToCart(item)">
+                                Add to Cart
+                            </button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-secondary" disabled>Unavailable</button>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (cart.Any())
+    {
+        <div class="mt-4">
+            <h4>Shopping Cart</h4>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Price</th>
+                        <th>Quantity</th>
+                        <th>Total</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var cartItem in cart)
+                    {
+                        <tr>
+                            <td>@cartItem.MenuItem.Name</td>
+                            <td>$@cartItem.MenuItem.Price.ToString("F2")</td>
+                            <td>@cartItem.Quantity</td>
+                            <td>$@((cartItem.MenuItem.Price * cartItem.Quantity).ToString("F2"))</td>
+                            <td>
+                                <button class="btn btn-sm btn-danger" @onclick="() => RemoveFromCart(cartItem)">
+                                    Remove
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                        <td colspan="2"><strong>$@GetTotal().ToString("F2")</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
+            <button class="btn btn-success" @onclick="ProceedToCheckout">
+                Proceed to Checkout
+            </button>
+        </div>
+    }
+}
+
+@code {
+    [Parameter]
+    public int RestaurantId { get; set; }
+
+    private List<MenuItem> menuItems = new();
+    private List<CartItem> cart = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMenu();
+    }
+
+    private async Task LoadMenu()
+    {
+        try
+        {
+            isLoading = true;
+            var response = await Http.GetFromJsonAsync<List<MenuItem>>($"http://localhost:5078/api/Menu/restaurant/{RestaurantId}");
+            menuItems = response ?? new List<MenuItem>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading menu: {ex.Message}");
+            menuItems = new List<MenuItem>();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void AddToCart(MenuItem item)
+    {
+        var existingItem = cart.FirstOrDefault(c => c.MenuItem.Id == item.Id);
+        if (existingItem != null)
+        {
+            existingItem.Quantity++;
+        }
+        else
+        {
+            cart.Add(new CartItem { MenuItem = item, Quantity = 1 });
+        }
+    }
+
+    private void RemoveFromCart(CartItem item)
+    {
+        cart.Remove(item);
+    }
+
+    private decimal GetTotal()
+    {
+        return cart.Sum(c => c.MenuItem.Price * c.Quantity);
+    }
+
+    private void ProceedToCheckout()
+    {
+        // Store cart in session/service before navigation
+        Navigation.NavigateTo($"/order/{RestaurantId}");
+    }
+
+    public class MenuItem
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public decimal Price { get; set; }
+        public bool IsAvailable { get; set; }
+        public int RestaurantId { get; set; }
+    }
+
+    public class CartItem
+    {
+        public MenuItem MenuItem { get; set; } = new();
+        public int Quantity { get; set; }
+    }
+}

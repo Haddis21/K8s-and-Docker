@@ -1,0 +1,124 @@
+﻿@page "/order/{OrderId:int}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject IOrderService OrderService
+
+<PageTitle>Order Details</PageTitle>
+
+@if (order == null)
+{
+    <div class="text-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between">
+                    <h5>Order #@order.Id</h5>
+                    <span class="badge @GetStatusBadgeClass(order.Status) fs-6">@order.Status</span>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6>Restaurant</h6>
+                            <p>@order.RestaurantName</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Order Date</h6>
+                            <p>@order.CreatedAt.ToString("MMMM dd, yyyy HH:mm")</p>
+                        </div>
+                    </div>
+
+                    <h6>Order Items</h6>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Quantity</th>
+                                <th>Price</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in order.Items)
+                            {
+                                <tr>
+                                    <td>@item.MenuItemName</td>
+                                    <td>@item.Quantity</td>
+                                    <td>@item.Price.ToString("C")</td>
+                                    <td>@item.ItemTotal.ToString("C")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6>Order Summary</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Subtotal:</span>
+                        <span>@order.Subtotal.ToString("C")</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Delivery Fee:</span>
+                        <span>@order.DeliveryFee.ToString("C")</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Tax:</span>
+                        <span>@order.Tax.ToString("C")</span>
+                    </div>
+                    <hr />
+                    <div class="d-flex justify-content-between fw-bold">
+                        <span>Total:</span>
+                        <span>@order.Total.ToString("C")</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h6>Delivery Address</h6>
+                </div>
+                <div class="card-body">
+                    <address>
+                        @order.DeliveryAddress.Street<br />
+                        @order.DeliveryAddress.City @order.DeliveryAddress.PostalCode
+                    </address>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int OrderId { get; set; }
+
+    private OrderDto? order;
+
+    protected override async Task OnInitializedAsync()
+    {
+        order = await OrderService.GetOrderAsync(OrderId);
+    }
+
+    private string GetStatusBadgeClass(OrderStatus status) => status switch
+    {
+        OrderStatus.Pending => "bg-warning text-dark",
+        OrderStatus.Confirmed => "bg-info",
+        OrderStatus.Preparing => "bg-primary",
+        OrderStatus.Ready => "bg-success",
+        OrderStatus.OutForDelivery => "bg-success",
+        OrderStatus.Delivered => "bg-secondary",
+        OrderStatus.Cancelled => "bg-danger",
+        _ => "bg-secondary"
+    };
+}

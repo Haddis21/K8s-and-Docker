@@ -1,0 +1,70 @@
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+  namespace: food-ordering-system
+data:
+  ApiUrls__UserService: "http://user-service:8080"
+  ApiUrls__RestaurantService: "http://restaurant-service:8081"
+  ApiUrls__OrderService: "http://order-service:8082"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: food-ordering-system
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: food-frontend:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5000
+        env:
+        - name: ASPNETCORE_URLS
+          value: "http://+:5000"
+        - name: ApiUrls__UserService
+          valueFrom:
+            configMapKeyRef:
+              name: frontend-config
+              key: ApiUrls__UserService
+        - name: ApiUrls__RestaurantService
+          valueFrom:
+            configMapKeyRef:
+              name: frontend-config
+              key: ApiUrls__RestaurantService
+        - name: ApiUrls__OrderService
+          valueFrom:
+            configMapKeyRef:
+              name: frontend-config
+              key: ApiUrls__OrderService
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "250m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: food-ordering-system
+spec:
+  type: LoadBalancer
+  selector:
+    app: frontend
+  ports:
+  - port: 80
+    targetPort: 5000

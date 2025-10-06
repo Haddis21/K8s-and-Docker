@@ -1,0 +1,302 @@
+﻿@page "/cart"
+@* @attribute [Authorize] *@
+@rendermode InteractiveServer
+@inject CartService CartService
+@inject IOrderService OrderService
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@using FoodOrderApp.Models
+
+<PageTitle>Shopping Cart</PageTitle>
+<AuthorizeView Context="authContext">
+    <Authorized>
+<h1>Shopping Cart</h1>
+
+@if (cart.Items.Any())
+{
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5>@cart.RestaurantName</h5>
+                </div>
+                <div class="card-body">
+                    @foreach (var item in cart.Items)
+                    {
+                        <div class="row mb-3 pb-3 border-bottom">
+                            <div class="col-6">
+                                <h6>@item.MenuItemName</h6>
+                                <p class="text-success mb-0">@item.Price.ToString("C")</p>
+                            </div>
+                            <div class="col-3">
+                                <div class="input-group input-group-sm">
+                                    <button class="btn btn-outline-secondary" @onclick="() => UpdateQuantity(item.MenuItemId, item.Quantity - 1)">-</button>
+                                    <input type="number" class="form-control text-center" value="@item.Quantity" readonly />
+                                    <button class="btn btn-outline-secondary" @onclick="() => UpdateQuantity(item.MenuItemId, item.Quantity + 1)">+</button>
+                                </div>
+                            </div>
+                            <div class="col-2">
+                                <span class="fw-bold">@item.ItemTotal.ToString("C")</span>
+                            </div>
+                            <div class="col-1">
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveItem(item.MenuItemId)">×</button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Order Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Subtotal:</span>
+                        <span>@cart.Subtotal.ToString("C")</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Delivery Fee:</span>
+                        <span>@estimatedDeliveryFee.ToString("C")</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Tax (12%):</span>
+                        <span>@estimatedTax.ToString("C")</span>
+                    </div>
+                    <hr />
+                    <div class="d-flex justify-content-between fw-bold">
+                        <span>Total:</span>
+                        <span>@estimatedTotal.ToString("C")</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-primary w-100" @onclick="ShowCheckout">
+                        Proceed to Checkout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (showCheckoutForm)
+    {
+        <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Checkout</h5>
+                        <button type="button" class="btn-close" @onclick="HideCheckout"></button>
+                    </div>
+                    <div class="modal-body">
+                        @if (!string.IsNullOrEmpty(errorMessage))
+                        {
+                            <div class="alert alert-danger">@errorMessage</div>
+                        }
+
+                        <EditForm Model="deliveryAddress" OnValidSubmit="PlaceOrder">
+                            <DataAnnotationsValidator />
+
+                            <h6>Delivery Address</h6>
+                            <div class="mb-3">
+                                <label class="form-label">Street:</label>
+                                <InputText class="form-control" @bind-Value="deliveryAddress.Street" />
+                                <ValidationMessage For="@(() => deliveryAddress.Street)" />
+                            </div>
+                            <div class="row">
+                                <div class="col-8">
+                                    <div class="mb-3">
+                                        <label class="form-label">City:</label>
+                                        <InputText class="form-control" @bind-Value="deliveryAddress.City" />
+                                        <ValidationMessage For="@(() => deliveryAddress.City)" />
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">Postal Code:</label>
+                                        <InputText class="form-control" @bind-Value="deliveryAddress.PostalCode" />
+                                        <ValidationMessage For="@(() => deliveryAddress.PostalCode)" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Special Instructions (Optional):</label>
+                                <InputTextArea class="form-control" @bind-Value="specialInstructions" rows="3" />
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" @onclick="HideCheckout">Cancel</button>
+                                <button type="submit" class="btn btn-primary" disabled="@isPlacingOrder">
+                                    @if (isPlacingOrder)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                    }
+                                    Place Order (@estimatedTotal.ToString("C"))
+                                </button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+else
+{
+    <div class="text-center">
+        <div class="card">
+            <div class="card-body">
+                <h5>Your cart is empty</h5>
+                <p>Browse restaurants and add items to your cart.</p>
+                <a href="/restaurants" class="btn btn-primary">Browse Restaurants</a>
+            </div>
+        </div>
+    </div>
+}
+</Authorized>
+    <NotAuthorized>
+        <div class="text-center">
+            <h3>Please login to view your cart</h3>
+            <a href="/login" class="btn btn-primary">Login</a>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+@code {
+    private FoodOrderApp.Models.Cart cart = new();
+    private bool showCheckoutForm = false;
+    private bool isPlacingOrder = false;
+    private string? errorMessage;
+    private string specialInstructions = string.Empty;
+    private AddressDto deliveryAddress = new() { City = "Stockholm", PostalCode = "11122" };
+
+    private decimal estimatedDeliveryFee = 35.00m;
+    private decimal estimatedTax => cart.Subtotal * 0.12m;
+    private decimal estimatedTotal => cart.Subtotal + estimatedDeliveryFee + estimatedTax;
+
+    protected override void OnInitialized()
+    {
+        cart = CartService.GetCart();
+        CartService.OnCartChanged += OnCartChanged;
+    }
+
+    private void OnCartChanged()
+    {
+        cart = CartService.GetCart();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void UpdateQuantity(int menuItemId, int quantity)
+    {
+        CartService.UpdateQuantity(menuItemId, quantity);
+    }
+
+    private void RemoveItem(int menuItemId)
+    {
+        CartService.RemoveItem(menuItemId);
+    }
+
+    private void ShowCheckout()
+    {
+        showCheckoutForm = true;
+    }
+
+    private void HideCheckout()
+    {
+        showCheckoutForm = false;
+        errorMessage = null;
+    }
+
+    // private async Task PlaceOrder()
+    // {
+    //     try
+    //     {
+    //         isPlacingOrder = true;
+    //         errorMessage = null;
+
+    //         var createOrderDto = new CreateOrderDto
+    //         {
+    //             RestaurantId = cart.RestaurantId,
+    //             Items = cart.Items.Select(i => new CreateOrderItemDto
+    //             {
+    //                 MenuItemId = i.MenuItemId,
+    //                 Quantity = i.Quantity,
+    //                 SpecialInstructions = i.SpecialInstructions
+    //             }).ToList(),
+    //             DeliveryAddress = deliveryAddress,
+    //             SpecialInstructions = specialInstructions
+    //         };
+
+    //         var order = await OrderService.CreateOrderAsync(createOrderDto);
+    //         if (order != null)
+    //         {
+    //             CartService.ClearCart();
+    //             Navigation.NavigateTo($"/order/{order.Id}");
+    //         }
+    //         else
+    //         {
+    //             errorMessage = "Failed to place order. Please try again.";
+    //         }
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         errorMessage = $"An error occurred: {ex.Message}";
+    //     }
+    //     finally
+    //     {
+    //         isPlacingOrder = false;
+    //     }
+    // }
+
+    private async Task PlaceOrder()
+    {
+        Console.WriteLine("PlaceOrder called");
+        try
+        {
+            isPlacingOrder = true;
+            errorMessage = null;
+            StateHasChanged(); // Force UI update
+
+            Console.WriteLine($"Creating order for restaurant {cart.RestaurantId}");
+
+            var createOrderDto = new CreateOrderDto
+            {
+                RestaurantId = cart.RestaurantId,
+                Items = cart.Items.Select(i => new CreateOrderItemDto
+                {
+                    MenuItemId = i.MenuItemId,
+                    Quantity = i.Quantity
+                }).ToList(),
+                DeliveryAddress = deliveryAddress
+            };
+
+            Console.WriteLine("Calling OrderService...");
+            var order = await OrderService.CreateOrderAsync(createOrderDto);
+
+            if (order != null)
+            {
+                Console.WriteLine($"Order created: {order.Id}");
+                CartService.ClearCart();
+                Navigation.NavigateTo($"/order/{order.Id}");
+            }
+            else
+            {
+                Console.WriteLine("Order creation returned null");
+                errorMessage = "Failed to place order. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isPlacingOrder = false;
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose()
+    {
+        CartService.OnCartChanged -= OnCartChanged;
+    }
+}

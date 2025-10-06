@@ -1,0 +1,51 @@
+﻿@page "/orders"
+@* @attribute [Authorize] *@
+@rendermode InteractiveServer
+@inject IOrderService OrderService
+
+<PageTitle>My Orders</PageTitle>
+
+
+<h1>My Orders</h1>
+
+@if (orders == null)
+{
+    <div class="text-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (!orders.Any())
+{
+    <div class="text-center">
+        <div class="card">
+            <div class="card-body">
+                <h5>No orders yet</h5>
+                <p>When you place orders, they will appear here.</p>
+                <a href="/restaurants" class="btn btn-primary">Browse Restaurants</a>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row">
+        @foreach (var order in orders)
+        {
+            <div class="col-md-6 mb-4">
+                <OrderCard Order="order" />
+            </div>
+        }
+    </div>
+}
+
+
+@code {
+    private List<OrderDto>? orders;
+
+    protected override async Task OnInitializedAsync()
+    {
+        orders = await OrderService.GetUserOrdersAsync();
+    }
+}

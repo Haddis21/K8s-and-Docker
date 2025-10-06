@@ -1,0 +1,58 @@
+﻿@rendermode InteractiveServer
+@using FoodOrderApp.Services
+@inherits LayoutComponentBase
+@inject CartService CartService
+@inject NavigationManager Navigation
+@inject IAuthService AuthService
+@implements IDisposable
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4">
+            <div class="d-flex justify-content-between align-items-center w-100">
+                <h4>Food Ordering System</h4>
+                <div class="d-flex align-items-center">
+                    <CartSummary />
+                    <AuthorizeView>
+                        <Authorized>
+                            <span class="me-2">Hello, @context.User.Identity?.Name!</span>
+                            <button class="btn btn-outline-secondary btn-sm" @onclick="LogoutAsync">Logout</button>
+                        </Authorized>
+                    </AuthorizeView>
+                </div>
+            </div>
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+<div id="blazor-error-ui">
+    An unhandled error has occurred.
+    <a href="" class="reload">Reload</a>
+    <a class="dismiss">🗙</a>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        CartService.OnCartChanged += StateHasChanged;
+    }
+
+    private async Task LogoutAsync()
+    {
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/login");
+    }
+
+    public void Dispose()
+    {
+        CartService.OnCartChanged -= StateHasChanged;
+    }
+}

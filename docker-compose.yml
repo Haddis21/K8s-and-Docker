@@ -1,0 +1,29 @@
+version: '3.9'
+services:
+  restaurant-db:
+    image: postgres:15
+    container_name: restaurant-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: RestaurantDb
+    ports:
+      - "5432:5432"
+    volumes:
+      - restaurant_data:/var/lib/postgresql/data
+
+  restaurant-service:
+    build:
+      context: .
+      dockerfile: Restaurant_Services/Dockerfile
+    container_name: restaurant-service
+    ports:
+      - "8081:8081"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=restaurant-db;Database=RestaurantDb;Username=postgres;Password=postgres
+    depends_on:
+      - restaurant-db
+
+volumes:
+  restaurant_data:

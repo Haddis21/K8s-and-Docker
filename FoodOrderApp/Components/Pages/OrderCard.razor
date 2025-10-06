@@ -1,0 +1,50 @@
+﻿@rendermode InteractiveServer
+@inject NavigationManager Navigation
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between">
+        <span class="fw-bold">Order #@Order.Id</span>
+        <span class="badge @GetStatusBadgeClass(Order.Status)">@Order.Status</span>
+    </div>
+    <div class="card-body">
+        <h6>@Order.RestaurantName</h6>
+        <p class="small text-muted">@Order.CreatedAt.ToString("MMM dd, yyyy HH:mm")</p>
+        
+        @foreach (var item in Order.Items.Take(3))
+        {
+            <div class="small">@item.Quantity × @item.MenuItemName</div>
+        }
+        @if (Order.Items.Count > 3)
+        {
+            <div class="small text-muted">and @(Order.Items.Count - 3) more items...</div>
+        }
+
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <span class="fw-bold text-success">@Order.Total.ToString("C")</span>
+            <button class="btn btn-outline-primary btn-sm" @onclick="() => ViewOrder(Order.Id)">
+                View Details
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public OrderDto Order { get; set; } = null!;
+
+    private string GetStatusBadgeClass(OrderStatus status) => status switch
+    {
+        OrderStatus.Pending => "bg-warning text-dark",
+        OrderStatus.Confirmed => "bg-info",
+        OrderStatus.Preparing => "bg-primary",
+        OrderStatus.Ready => "bg-success",
+        OrderStatus.OutForDelivery => "bg-success",
+        OrderStatus.Delivered => "bg-secondary",
+        OrderStatus.Cancelled => "bg-danger",
+        _ => "bg-secondary"
+    };
+
+    private void ViewOrder(int orderId)
+    {
+        Navigation.NavigateTo($"/order/{orderId}");
+    }
+}

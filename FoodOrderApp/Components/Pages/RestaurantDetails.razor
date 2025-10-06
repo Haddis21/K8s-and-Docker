@@ -1,0 +1,70 @@
+﻿@page "/restaurant/{RestaurantId:int}"
+@rendermode InteractiveServer
+@inject IRestaurantService RestaurantService
+@inject CartService CartService
+@inject NavigationManager Navigation
+
+<PageTitle>@(restaurant?.Name ?? "Restaurant")</PageTitle>
+
+@if (restaurant == null)
+{
+    <div class="text-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else
+{
+    <div class="mb-4">
+        <h1>@restaurant.Name</h1>
+        <p class="lead">@restaurant.Description</p>
+        <div>
+            <span class="badge bg-secondary me-2">@restaurant.CuisineType</span>
+            <span class="text-muted me-3">⏱️ @restaurant.EstimatedDeliveryTime min</span>
+            <span class="text-success">🚚 @restaurant.DeliveryFee.ToString("C")</span>
+        </div>
+    </div>
+
+    @if (groupedMenuItems.Any())
+    {
+        @foreach (var category in groupedMenuItems)
+        {
+            <div class="mb-4">
+                <h3>@category.Key</h3>
+                <div class="row">
+                    @foreach (var item in category.Value)
+                    {
+                        <div class="col-md-6 mb-3">
+                            <MenuItemCard MenuItem="item" RestaurantId="restaurant.Id" RestaurantName="restaurant.Name" />
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <p>No menu items available.</p>
+    }
+}
+
+@code {
+    [Parameter] public int RestaurantId { get; set; }
+
+    private RestaurantDto? restaurant;
+    private Dictionary<string, List<MenuItemDto>> groupedMenuItems = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        restaurant = await RestaurantService.GetRestaurantAsync(RestaurantId);
+        
+        if (restaurant?.MenuItems != null)
+        {
+            groupedMenuItems = restaurant.MenuItems
+                .Where(m => m.IsAvailable)
+                .GroupBy(m => string.IsNullOrEmpty(m.Category) ? "Other" : m.Category)
+                .ToDictionary(g => g.Key, g => g.ToList());
+        }
+    }
+}

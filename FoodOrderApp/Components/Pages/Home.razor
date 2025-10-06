@@ -1,0 +1,47 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@inject IRestaurantService RestaurantService
+
+<PageTitle>Home - Food Ordering</PageTitle>
+
+<div class="hero-section mb-5">
+    <div class="jumbotron bg-primary text-white text-center p-5 rounded">
+        <h1 class="display-4">Welcome to Food Ordering</h1>
+        <p class="lead">Discover amazing restaurants and order your favorite meals</p>
+        <a class="btn btn-light btn-lg" href="/restaurants" role="button">Browse Restaurants</a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <h2>Popular Restaurants</h2>
+        @if (restaurants == null)
+        {
+            <div class="text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="row">
+                @foreach (var restaurant in restaurants.Take(6))
+                {
+                    <div class="col-md-4 mb-4">
+                        <RestaurantCard Restaurant="restaurant" />
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<RestaurantDto>? restaurants;
+
+    protected override async Task OnInitializedAsync()
+    {
+        restaurants = await RestaurantService.GetRestaurantsAsync();
+    }
+}

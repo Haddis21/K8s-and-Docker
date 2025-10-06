@@ -1,0 +1,129 @@
+﻿@page "/register"
+@rendermode InteractiveServer
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Register</PageTitle>
+
+<div class="card">
+    <div class="card-body">
+        <h3 class="card-title text-center">Register</h3>
+        
+        
+@if(!string.IsNullOrEmpty(errorMessage))        
+{            
+<div class = "alert alert-danger">
+@errorMessage
+</div>        
+}
+        <EditForm Model="registerModel" OnValidSubmit="HandleRegister">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">First Name:</label>
+                        <InputText class="form-control" @bind-Value="registerModel.FirstName" />
+                        <ValidationMessage For="@(() => registerModel.FirstName)" />
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Last Name:</label>
+                        <InputText class="form-control" @bind-Value="registerModel.LastName" />
+                        <ValidationMessage For="@(() => registerModel.LastName)" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Email:</label>
+                <InputText class="form-control" @bind-Value="registerModel.Email" />
+                <ValidationMessage For="@(() => registerModel.Email)" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Phone Number:</label>
+                <InputText class="form-control" @bind-Value="registerModel.PhoneNumber" />
+                <ValidationMessage For="@(() => registerModel.PhoneNumber)" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Password:</label>
+                <InputText type="password" class="form-control" @bind-Value="registerModel.Password" />
+                <ValidationMessage For="@(() => registerModel.Password)" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Confirm Password:</label>
+                <InputText type="password" class="form-control" @bind-Value="registerModel.ConfirmPassword" />
+                <ValidationMessage For="@(() => registerModel.ConfirmPassword)" />
+            </div>
+
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary" disabled="@isLoading">
+                    
+                @if(isLoading)                    
+                {                
+                <span class = "spinner-border spinner-border-sm me-2"></span>
+                  
+                }
+                Register
+                </button>
+                            </div>
+              </EditForm>
+
+        <hr />
+        <p class="text-center">
+            Already have an account? <a href="/login">Login here</a>
+        </p>
+    </div>
+</div>
+
+@code
+ 
+{
+
+    
+private RegisterDto  registerModel = new ();
+    
+private string ?errorMessage;
+    
+private bool  isLoading = false;
+    
+private async Task HandleRegister()    
+{      
+try        
+{
+ isLoading = true ;
+ errorMessage = null;
+            
+var  result = await AuthService.RegisterAsync(registerModel);
+           
+if(result != null )            
+{
+    Navigation.NavigateTo("/");            
+}
+           
+else            
+{
+   errorMessage = "Registration failed. Please try again.";
+}
+        
+}
+        
+catch(Exception  ex)        
+{
+   errorMessage = $"An error occurred: {ex.Message}";        
+}
+
+        
+finally       
+{
+    isLoading = false;        
+}
+    
+}
+
+}
